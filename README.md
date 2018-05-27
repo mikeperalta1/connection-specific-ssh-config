@@ -40,11 +40,13 @@ You can also try using this script with a different daemon (or your own custom s
 6. Create a short bash script inside the dispatcher directory that will launch connection-specific-ssh-config. For instance, you might name this file ```/etc/NetworkManager/dispatcher.d/99-launch-connection-specific-ssh-config```
 
 7. Inside your launcher script, put the following contents:
+
   ```
   #!/bin/bash
   
   /path/to/connection-specific-ssh-config "$1" "$2" "/path/to/connection-specific-ssh-config.ini"
   ```
+  
   This will take the two important variables which NetworkManager has passed along to your launcher script, and pass them along to connection-specific-ssh-config
 
 8. Repeat steps  2-7 for each additional user who would like connection based ssh configuration files.
