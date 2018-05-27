@@ -66,8 +66,14 @@ Configuration files for connection-specific-ssh-config are just standard python/
 
 * You need a section called "config", which currently only holds one variable:
    * *ssh_dir*, which specifies the directory your ssh client looks for configuration files (typically *~/.ssh/*)
+
 * You then need one or more sections which specify targets that associate ssh configuration files with network connection names
-   * The key *ssh__config_name* specifies the name of the ssh configuration file that should apply if this target activates
+   * The key *adapter* can specify one adapter to watch
+   * The key *adapters* can specify multiple adapters (must be written in JSON format)
+   * The key *ssid* can specify one connection name
+   * The key *ssids* can specify multiple connection names (must be written in JSON format)
+   * The key *ssh_config_name* specifies the name of the ssh configuration file that should apply if this target activates
+
 * You can then optionally add a "default" section, which specifies which default ssh configuration file to fallback to, if any
 
 Here's an example configuration file to help you get started:
@@ -94,3 +100,5 @@ ssh_config_name = config-home
 ```
 
 The above configuration file will instruct the script to use the ssh configuration file */home/mike/.ssh/config-work* while you're connected to one of your work connections *Work Connection - Main Office* or *Work Connection - Garys Office*, on either of your wireless adapters *wlan0* or *wlan1*. When you get home and connect to your *My Home Connection (Oh Joy)* connection on *wlan0*, the config file */home/mike/.ssh/config-home* will be used instead. Finally, the configuration file */home/mike/.ssh/config-default* will be used when *wlan0* connects to some undefined network.
+
+
