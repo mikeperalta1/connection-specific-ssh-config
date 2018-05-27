@@ -24,12 +24,22 @@ You can also try using this script with a different daemon (or your own custom s
 
 ## Installation (NetworkManager)
 1. Copy this script somewhere safe, such as ```/path/to/connection-specific-ssh-config```
-2. Create a configuration file somewhere safe, such as ```/path/to/connection-specific-ssh-config.ini``` (explained in detail further below)
-3. Open a terminal and navigate to NetworkManager's dispatcher directory, often found here:
+
+2. Move your old ssh configuration file (typically at *~/.ssh/config*) to a safe backup, like:
+
+   ```mv ~/.ssh/config config-backup```
+
+3. Create as many customized ssh configuration files as you need
+
+4. Create a configuration file somewhere safe, such as ```/path/to/connection-specific-ssh-config.ini``` (explained in detail further below)
+   
+5. Open a terminal and navigate to NetworkManager's dispatcher directory, often found here:
 
    ```cd /etc/NetworkManager/dispatcher.d```
-4. Create a short bash script inside the dispatcher directory that will launch connection-specific-ssh-config. For instance, you might name this file ```/etc/NetworkManager/dispatcher.d/99-launch-connection-specific-ssh-config```
-5. Inside your launcher script, put the following contents:
+
+6. Create a short bash script inside the dispatcher directory that will launch connection-specific-ssh-config. For instance, you might name this file ```/etc/NetworkManager/dispatcher.d/99-launch-connection-specific-ssh-config```
+
+7. Inside your launcher script, put the following contents:
   ```
   #!/bin/bash
   
@@ -37,7 +47,7 @@ You can also try using this script with a different daemon (or your own custom s
   ```
   This will take the two important variables which NetworkManager has passed along to your launcher script, and pass them along to connection-specific-ssh-config
 
-6. Repeat steps  2-5 for each additional user who would like connection based ssh configuration files.
+8. Repeat steps  2-5 for each additional user who would like connection based ssh configuration files.
 
 ## Example Scenarios
 
