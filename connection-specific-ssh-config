@@ -52,11 +52,21 @@ class SSHConfiger:
 		self.complain(s)
 		raise Exception(s)
 	
+	def quit(self, s):
+		
+		#
+		self.log("Quitting because: " + s)
+		sys.exit(0)
+		
 	#
 	def run(self):
 		
 		#
 		self.log("Running for interface \""+ self._action_interface +"\": " + self._action_command)
+		
+		#	Only run if an interface is coming up
+		if ( self._action_command != "up" ):
+			self.quit("We don't need to run for action command: " + str(self._action_command))
 		
 		#	Parse the config
 		self.parse_config()
@@ -65,9 +75,13 @@ class SSHConfiger:
 		if ( "ssh_dir" not in self._config.keys() ):
 			self.die("Config file needs key \"ssh_dir\" inside \"config\" section")
 		ssh_dir = self._config["ssh_dir"]
+		self.log("SSH Dir: " + str(ssh_dir))
 		
 		#	Determine which ssh config file we should use
 		ssh_config_name = self.determine_ssh_config_name()
+		self.log("Determined ssh config name: " + str(ssh_config_name))
+		if not ssh_config_name:
+			self.die("Unable to determine appropriate ssh config name; Quitting")
 		
 		#	Make paths
 		ssh_config_path_link = os.path.join(ssh_dir, "config")
@@ -101,9 +115,8 @@ class SSHConfiger:
 	#
 	def determine_ssh_config_name(self):
 		
-		#	Only run if an interface is coming up
-		if ( self._action_command != "up" ):
-			return None
+		#
+		self.log("Attempting to determine SSH config name")
 		
 		#	Check each section
 		found_ssh_config_name = None
@@ -111,23 +124,45 @@ class SSHConfiger:
 			
 			#
 			section = self._targets[section_name]
+			self.log("Examining section: " + str(section_name))
 			
-			#	Must match at least one interface
-			if ( self._action_interface not in section["adapters"] ):
+			#	Don't examine default if anything is picked already
+			if section_name == "default" and found_ssh_config_name:
+				self.log("Skipping default section because we've already found at least one match: " + str(found_ssh_config_name))
 				continue
 			
-			#
-			interface_ssid = self.get_interface_ssid(self._action_interface)
+			#	Check the interface
+			interface_matched = False
+			if (
+				#	Matches, if current interface found in adapters
+				self._action_interface in section["adapters"]
+				
+				#	Can also match if we're in section "default"
+				or section_name == "default"
+			):
+				interface_matched = True
+			if not interface_matched:
+				self.log("Section \"" + str(section_name) + "\" didn't match any interfaces; Skipping")
+				continue
 			
-			#	Must also match at least one SSID
-			if ( interface_ssid not in section["ssids"] ):
+			#	Grab the SSID this adapter is currently connected to
+			interface_ssid = self.get_interface_ssid(self._action_interface)
+			if not interface_ssid:
+				self.log("Interface \"" + str(interface_ssid) + "\" isn't connected to anything ... ")
+			self.log("Interface \"" + str(self._action_interface) + "\" is currently connected to: \"" + str(interface_ssid) + "\"")
+			
+			#	Must also match at least one SSID,
+			#	OR we're in the default section
+			if interface_ssid not in section["ssids"] and section_name != "default":
+				self.log("Did not find SSID \"" + interface_ssid + "\" in section ssids: " + str(section["ssids"]))
 				continue
 			
 			#	Found a match!
 			found_ssh_config_name = section["ssh_config_name"]
+			self.log("Found matching ssh config name: " + str(found_ssh_config_name))
 		
 		#	Didn't find anything? Go default ...
-		if (found_ssh_config_name == None):
+		if (not found_ssh_config_name):
 			if ( "default" in self._targets.keys() ):
 				if ( "ssh_config_name" in self._targets["default"].keys() ):
 					found_ssh_config_name = self._targets["default"]["ssh_config_name"]
@@ -172,6 +207,7 @@ class SSHConfiger:
 				continue
 			
 			#
+			self.log("Parsing config target: \"" + section + "\"")
 			target = {
 				"adapters" : [],
 				"ssids" : []
@@ -197,6 +233,7 @@ class SSHConfiger:
 			
 			#
 			targets[section] = target
+			self.log("Parsed config for config target \"" + section + "\": " + str(target))
 		
 		#
 		self._config = config
