@@ -52,11 +52,21 @@ class SSHConfiger:
 		self.complain(s)
 		raise Exception(s)
 	
+	def quit(self, s):
+		
+		#
+		self.log("Quitting because: " + s)
+		sys.exit(0)
+		
 	#
 	def run(self):
 		
 		#
 		self.log("Running for interface \""+ self._action_interface +"\": " + self._action_command)
+		
+		#	Only run if an interface is coming up
+		if ( self._action_command != "up" ):
+			self.quit("We don't need to run for action command: " + str(self._action_command))
 		
 		#	Parse the config
 		self.parse_config()
@@ -104,10 +114,6 @@ class SSHConfiger:
 	
 	#
 	def determine_ssh_config_name(self):
-		
-		#	Only run if an interface is coming up
-		if ( self._action_command != "up" ):
-			return None
 		
 		#
 		self.log("Attempting to determine SSH config name")
