@@ -21,14 +21,14 @@ class Target:
 		self.__ssids = []
 		
 		# noinspection PyTypeChecker
-		self.__ssh_config_name: str = None
+		self.__ssh_config_file_name: str = None
 	
 	def __str__(self):
 		
 		s = ""
 		
 		s += f"Target: {self.__name}"
-		s += f"\n> SSH config file name: {self.__ssh_config_name}"
+		s += f"\n> SSH config file name: {self.__ssh_config_file_name}"
 		s += f"\n> Adapters: "
 
 		if len(self.__adapters_names) > 0:
@@ -63,6 +63,15 @@ class Target:
 		)
 		
 		self.__data = data
+		
+		assert "config-file-name" in self.__data.keys(), (
+			f"Name of ssh config file must be present at config-file-name"
+		)
+		config_file_name = self.__data["config-file-name"]
+		assert isinstance(config_file_name, str), (
+			f"config-file-name must be a string, but got: {type(config_file_name).__name__}"
+		)
+		self.__ssh_config_file_name = config_file_name
 		
 		if "adapters" in self.__data.keys():
 			adapters = self.__data["adapters"]
@@ -107,13 +116,14 @@ class Target:
 		assert len(self.__adapters_names) > 0, (
 			f"At least one adapter must be configured at target-name::adapters"
 		)
-		assert len(self.__ssids) > 0, (
-			f"At least one ssid must be configured at target-name::ssids"
-		)
 	
 	@property
-	def ssh_config_name(self) -> str:
-		return self.__ssh_config_name
+	def name(self) -> str:
+		return self.__name
+	
+	@property
+	def ssh_config_file_name(self) -> str:
+		return self.__ssh_config_file_name
 	
 	@property
 	def adapters(self) -> list[str]:
@@ -125,6 +135,9 @@ class Target:
 
 
 class Config:
+	
+	__DEFAULT_NORMAL_SSH_CONFIG_FILE_NAME = "config"
+	__DEFAULT_SSH_DIRECTORY_NAME = ".ssh"
 	
 	def __init__(self, logger: Logger, file_path: str):
 		
@@ -142,7 +155,9 @@ class Config:
 		self.__data = {}
 		
 		self.__dry_run = False
-		self.__ssh_dir = Path(os.path.expanduser("~"))
+		self.__ssh_dir = Path(os.path.expanduser("~")) / self.__DEFAULT_SSH_DIRECTORY_NAME
+		# noinspection PyTypeChecker
+		self.__default_target_name: str = None
 		self.__targets = {}
 		
 		self._load_config()
@@ -155,6 +170,7 @@ class Config:
 		s = ""
 		
 		s += "*** Config ***"
+		s += "\n Dry run: " + "True" if self.__dry_run else "False"
 		for target in self.__targets.values():
 			s += "\n" + str(target)
 		
@@ -184,7 +200,7 @@ class Config:
 			d = options["dry-run"]
 			assert isinstance(d, bool), "options::dry-run must be a bool"
 			if d:
-				self.__logger.log(f"Found configured dry run")
+				self.__logger.complain(f"Dry run enabled in config")
 			self.__dry_run = d
 		
 		if "ssh-dir" in options.keys():
@@ -195,14 +211,16 @@ class Config:
 		else:
 			self.__logger.log(f"options::ssh-dir not found")
 		
-		self.__targets = {}
-		
-		# Setup a default target
-		t = Target(
-			logger=self.__logger,
-			name="default",
+		assert "default-target" in options.keys(), (
+			f"Must specify the name of the default target at options::default-target"
 		)
-		self.__targets["default"] = t
+		default_target_name = options["default-target"]
+		assert isinstance(default_target_name, str), (
+			f"Default target name must be a string but got: {type(default_target_name).__name__}"
+		)
+		self.__default_target_name = default_target_name
+		
+		self.__targets = {}
 		
 		assert "targets" in self.__data.keys(), "Config should specify targets"
 		targets = self.__data["targets"]
@@ -225,6 +243,15 @@ class Config:
 				raise e
 			
 			self.__targets[target_name] = t
+		
+		if self.__default_target_name not in self.__targets.keys():
+			raise AssertionError(
+				f"Default target specified as {self.__default_target_name} but was not found in dict of targets"
+			)
+	
+	@property
+	def default_normal_ssh_config_file_name(self) -> str:
+		return self.__DEFAULT_NORMAL_SSH_CONFIG_FILE_NAME
 	
 	@property
 	def file_path(self) -> Path:
@@ -237,6 +264,10 @@ class Config:
 	@dry_run.setter
 	def dry_run(self, b: bool):
 		self.__dry_run = b
+	
+	@property
+	def default_target_name(self) -> str:
+		return self.__default_target_name
 	
 	@property
 	def ssh_dir(self) -> Path | None:
