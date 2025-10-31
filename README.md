@@ -9,8 +9,15 @@ Written by Mike Peralta and released to the public via GPLv3 on Sunday, May 27th
 ## Requirements
 
   * Linux (possibly others)
+
   * Python 3
+
+    * pyenv
+
+    * pipenv
+
   * NetworkManager and nmcli (tested on v1.10.6)
+
   * One of the following: root access, the ability to place executable files inside NetworkManager's dispatcher directory, or the ability to call this script whenever connection details change
 
 Note: This script has only been tested with NetworkManager and nmcli 1.10.6, but should work with any other daemon or application that can call this script with the required parameters.
