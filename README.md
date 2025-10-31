@@ -20,7 +20,7 @@ Written by Mike Peralta and released to the public via GPLv3 on Sunday, May 27th
 
   * One of the following: root access, the ability to place executable files inside NetworkManager's dispatcher directory, or the ability to call this script whenever connection details change
 
-Note: This script has only been tested with NetworkManager and nmcli 1.10.6, but should work with any other daemon or application that can call this script with the required parameters.
+Note: This script has only been tested with NetworkManager and nmcli 1.46, but should work with any other daemon or application that can call this script with the required parameters.
 
 You can also try using this script with a different daemon (or your own custom script). All you need to do is call this script whenever some change in the network occurs, with the following parameters:
 
