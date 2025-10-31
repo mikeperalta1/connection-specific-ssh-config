@@ -7,49 +7,91 @@ The Linux SSH client has many configuration options to choose from, and sometime
 Written by Mike Peralta and released to the public via GPLv3 on Sunday, May 27th, 2018
 
 ## Requirements
-* Linux (possibly others)
-* Python 3
-* NetworkManager and nmcli (tested on v1.10.6)
-* One of the following: root access, the ability to place executable files inside NetworkManager's dispatcher directory, or the ability to call this script whenever connection details change
 
-Note: This script has only been tested with NetworkManager and nmcli 1.10.6, but should work with any other daemon or application that can call this script with the required parameters.
+  * Linux (possibly others)
+
+  * Python 3
+
+    * pyenv
+
+    * pipenv
+
+  * NetworkManager and nmcli (tested on v1.46)
+
+  * One of the following: root access, the ability to place executable files inside NetworkManager's dispatcher directory, or the ability to call this script whenever connection details change
+
+Note: This script has only been tested with NetworkManager and nmcli 1.46, but should work with any other daemon or application that can call this script with the required parameters.
 
 You can also try using this script with a different daemon (or your own custom script). All you need to do is call this script whenever some change in the network occurs, with the following parameters:
 
-```connection-specific-ssh-config <interface> <command> <ini_path>```
+```bash
+$ cd path/to/connection-specific-ssh-config && pipenv run python main.py --config <config_path> --adapter <adapter> --command <command>
+```
 
-* Where *interface* is the name of whatever interface just changed
-* Where *command* is the type of change occurring. Currently, the script only does anything when receiving the "up" command.
-* Where *ini_path* is the path to an ini configuration file, explained below
+  * Where *config_path* is the path to a yaml configuration file, explained below
+
+  * Where *adapter* is the name of the adapter/interface that has changed states
+
+  * Where *command* is the type of change occurring. Currently, the script only does anything when receiving the `up` command.
+
 
 ## Installation (NetworkManager)
-1. Copy this script somewhere safe, such as ```/path/to/connection-specific-ssh-config```
 
-2. Move your old ssh configuration file (typically at *~/.ssh/config*) to a safe backup, like:
+This section to help with installation.
 
-   ```mv ~/.ssh/config config-backup```
+### Python Environment
 
-3. Create as many customized ssh configuration files as you need
+  1. Install [pyenv](https://github.com/pyenv/pyenv)
+  2. Install [pipenv](https://pipenv.pypa.io/en/latest/)
 
-4. Create a configuration file somewhere safe, such as ```/path/to/connection-specific-ssh-config.ini``` (explained in detail further below)
-   
-5. Open a terminal and navigate to NetworkManager's dispatcher directory, often found here:
+Setting up the *pipenv* environment is pretty straight forward:
 
-   ```cd /etc/NetworkManager/dispatcher.d```
+```bash
+$ cd /path/to/connection-specific-ssh-config
+$ pyenv update
+$ pyenv install
+$ pip install --upgrade pip pipenv
+$ pipenv sync
+```
 
-6. Create a short bash script inside the dispatcher directory that will launch connection-specific-ssh-config. For instance, you might name this file ```/etc/NetworkManager/dispatcher.d/99-launch-connection-specific-ssh-config```
+You should then be able to get a help menu with:
 
-7. Inside your launcher script, put the following contents:
+```bash
+$ cd /path/to/connection-specific-ssh-config
+$ pipenv run python main.py --help
+```
 
-  ```
-  #!/bin/bash
-  
-  /path/to/connection-specific-ssh-config "$1" "$2" "/path/to/connection-specific-ssh-config.ini"
-  ```
-  
-  This will take the two important variables which NetworkManager has passed along to your launcher script, and pass them along to connection-specific-ssh-config
+### SSH Config Preparation
 
-8. Repeat steps  2-7 for each additional user who would like connection based ssh configuration files.
+1. Move your old ssh configuration file (typically at *~/.ssh/config*) to a safe backup, like:
+
+    * ```mv ~/.ssh/config config-backup```
+
+2. Create as many customized ssh configuration files as you need, such as `config-remote` or `config-home`. Do not name any of them `config`.
+
+### Configuration File
+
+1. Create a configuration file somewhere safe, such as ```/path/to/connection-specific-ssh-config.yaml``` (explained in detail further below)
+
+### Network Manager Dispatch
+
+1. Open a terminal and navigate to NetworkManager's dispatcher directory, often found here:
+
+    * ```cd /etc/NetworkManager/dispatcher.d```
+
+    * There may be subdirectories underneath. Just ignore them.
+
+2. Create a short bash script inside the dispatcher directory that will launch *connection-specific-ssh-config*. For instance, you might name this file ```/etc/NetworkManager/dispatcher.d/99-launch-connection-specific-ssh-config```
+
+3. Inside your launcher script, put the following contents:
+
+        #!/bin/bash
+
+        cd /path/to/connection-specific-ssh-config && pipenv run python main.py --config /path/to/your/config.yaml --interface "$1" --command "$2"
+
+    * This will take the two important variables which NetworkManager has passed along to your launcher script, and give them to *connection-specific-ssh-config*
+
+4. Repeat steps  1-3 for each additional user who would like connection based ssh configuration files.
 
 ## Example Scenarios
 
@@ -64,44 +106,46 @@ Why would you use this script? Suppose the following scenarios:
 Each of these scenarios can be solved by the connection-specific-ssh-config script. Simply create as many ssh configuration files as you need, and each can be dynamically symlinked as you connec to different networks.
 
 ## Configuration File
-Configuration files for connection-specific-ssh-config are just standard python/php style ini files, and are relatively simple:
+Configuration files for connection-specific-ssh-config are written in YAML and are relatively simple:
 
-* You need a section called "config", which currently only holds one variable:
-   * *ssh_dir*, which specifies the directory your ssh client looks for configuration files (typically *~/.ssh/*)
+* You need a section called `options`, which holds two variables:
 
-* You then need one or more sections which specify targets that associate ssh configuration files with network connection names
-   * The key *adapter* can specify one adapter to watch
-   * The key *adapters* can specify multiple adapters (must be written in JSON format)
-   * The key *ssid* can specify one connection name
-   * The key *ssids* can specify multiple connection names (must be written in JSON format)
-   * The key *ssh_config_name* specifies the name of the ssh configuration file that should apply if this target activates
+    1. `ssh-dir`, which specifies your ssh configuration directory (typically *~/.ssh/*)
+    2. `default-target`, which specifies the default target to use if the currently connected wifi access point does not match anything configured.
 
-* You can then optionally add a "default" section, which specifies which default ssh configuration file to fallback to, if any
+* You then need one or more sections which specify targets that associate ssh configuration files with network connection names:
+
+    * The key `adapter` can specify one adapter to watch
+    * The key `adapters` can specify multiple adapters, as a list
+    * The key `ssid` can specify one connection name
+    * The key `ssids` can specify multiple connection names, as a list
+    * The key *config-file-name* specifies the name of the ssh configuration file that should apply if this target activates
 
 Here's an example configuration file to help you get started:
 
+```yaml
+options:
+
+  default-target: remote
+  ssh-dir: /home/your-username/.ssh
+
+targets:
+
+  home:
+    adapters:
+      - wlo1
+    ssids:
+      - Some Wifi AP Name
+      - Some Other Wifi AP Name
+    config-file-name: config-home
+
+  remote:
+    adapters:
+      - wlo1
+    config-file-name: config-remote
 ```
 
-[config]
-ssh_dir = /home/mike/.ssh
-
-[default]
-adapter = wlan0
-ssh_config_name = config-default
-
-[Wifi Work]
-adapters = ["wlan0", "wlan1"]
-ssids = ["Work Connection - Main Office", "Work Connection - Garys Office"]
-ssh_config_name = config-work
-
-[Wifi Home]
-adapter = wlan0
-ssid = My Home Connection (Oh Joy)
-ssh_config_name = config-home
-
-```
-
-The above configuration file will instruct the script to use the ssh configuration file */home/mike/.ssh/config-work* while you're connected to one of your work connections *Work Connection - Main Office* or *Work Connection - Garys Office*, on either of your wireless adapters *wlan0* or *wlan1*. When you get home and connect to your *My Home Connection (Oh Joy)* connection on *wlan0*, the config file */home/mike/.ssh/config-home* will be used instead. Finally, the configuration file */home/mike/.ssh/config-default* will be used when *wlan0* connects to some undefined network.
+The above configuration file will instruct the script to use the ssh config file */home/your-username/.ssh/config-home* while you're connected to one of the access points named in the `ssids` list of the `home` target. Otherwise, the default config file */home/your-username/.ssh/config-remote* would be used. All of this would only apply to the adapter `wlo1`, but you could specify more adapters.
 
 The script works by simply creating a symlink where your original ssh configuration file was (typically *~/.ssh/config*), pointing to the ssh configuration determined to be the one you want active. Note that this of course means the script will fail (for safety reasons), if your original ssh configuration file still exists as a normal file.
 
