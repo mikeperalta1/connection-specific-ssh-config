@@ -16,7 +16,7 @@ Written by Mike Peralta and released to the public via GPLv3 on Sunday, May 27th
 
     * pipenv
 
-  * NetworkManager and nmcli (tested on v1.10.6)
+  * NetworkManager and nmcli (tested on v1.46)
 
   * One of the following: root access, the ability to place executable files inside NetworkManager's dispatcher directory, or the ability to call this script whenever connection details change
 
